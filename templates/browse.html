@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件管理系统</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-top: 20px;
+            color: #333;
+            font-size: 2em;
+        }
+        .container {
+            width: 90%;
+            max-width: 900px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .upload-section,
+        .search-section {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .upload-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .upload-buttons button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .upload-buttons button:hover {
+            background-color: #0056b3;
+        }
+        .upload-section input[type="file"] {
+            display: none;
+        }
+        .upload-section input[type="submit"] {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .upload-section input[type="submit"]:hover {
+            background-color: #218838;
+        }
+        .search-section input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .search-section input[type="submit"] {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .search-section input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .file-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .file-card {
+            background-color: #f9f9f9;
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .file-info {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .file-info a {
+            font-size: 1em;
+            font-weight: bold;
+            text-decoration: none;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .file-info a:hover {
+            text-decoration: underline;
+        }
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .file-actions button {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .file-actions button:hover {
+            color: #dc3545;
+        }
+        .file-actions form {
+            display: inline;
+        }
+        .file-actions input[type="text"] {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .file-actions button.rename-btn {
+            background-color: #28a745;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+        .file-actions button.rename-btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>文件管理系统</h1>
+    <div class="container">
+        <!-- 上传部分 -->
+        <div class="upload-section">
+            <div class="upload-buttons">
+                <button type="button" onclick="document.getElementById('fileInput').click()">选择文件</button>
+                <button type="button" onclick="document.getElementById('folderInput').click()">选择文件夹</button>
+            </div>
+            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+                <!-- 这两个文件输入是隐藏的，通过按钮来触发 -->
+                <input type="file" id="fileInput" name="file" multiple onchange="this.form.submit()">
+                <input type="file" id="folderInput" name="file" webkitdirectory multiple onchange="this.form.submit()">
+                <input type="submit" value="上传">
+            </form>
+        </div>
+
+        <!-- 搜索部分 -->
+        <div class="search-section">
+            <form action="/search" method="get">
+                <input type="text" name="q" placeholder="搜索文件">
+                <input type="submit" value="搜索">
+            </form>
+        </div>
+
+        <h2>当前文件夹: {{ current_folder or '根目录' }}</h2>
+
+        {% if current_folder %}
+        <a href="{{ url_for('browse_files', subpath='') }}">返回根目录</a>
+        <br><br>
+        {% endif %}
+
+        <!-- 文件列表 -->
+        <ul class="file-list">
+            {% for file in files %}
+            <li class="file-card">
+                <div class="file-info">
+                    {% if file.is_dir %}
+                    <a href="{{ url_for('browse_files', subpath=file.path) }}">{{ file.name }}/</a>
+                    {% else %}
+                    <a href="/uploads/{{ file.path }}">{{ file.name }}</a> |
+                    大小: {{ file.size }} 字节 | 上传时间: {{ file.time }}
+                    {% endif %}
+                </div>
+                <div class="file-actions">
+                    {% if not file.is_dir %}
+                    <button onclick="location.href='/preview/{{ file.path }}'">预览</button>
+                    {% endif %}
+                    <form action="/delete/{{ file.path }}" method="post">
+                        <button type="submit">删除</button>
+                    </form>
+                    <button class="rename-btn" onclick="toggleRename(this)">重命名</button>
+                    <form action="/rename/{{ file.path }}" method="post" class="rename-form" style="display:none;">
+                        <input type="text" name="new_name" placeholder="重命名">
+                        <button type="submit" class="rename-btn">确认</button>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <script>
+        function toggleRename(button) {
+            const form = button.nextElementSibling;
+            if (form.style.display === "none") {
+                form.style.display = "inline-flex";
+                button.style.display = "none";
+            } else {
+                form.style.display = "none";
+                button.style.display = "inline-block";
+            }
+        }
+    </script>
+</body>
+</html>
